@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Feynman</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400&family=IBM+Plex+Sans+KR:wght@300;400;600&display=swap">
+<style>
+  :root {
+    --bg: #fafaf7;
+    --ink: #151614;
+    --mute: #8b8c86;
+    --faint: #c9cac3;
+    --line: #e6e6e0;
+    --accent: #66742a;
+    --sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #121311; --ink: #ecece6; --mute: #85867f; --faint: #4a4b46; --line: #262724; --accent: #b0bf72;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #121311; --ink: #ecece6; --mute: #85867f; --faint: #4a4b46; --line: #262724; --accent: #b0bf72;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: var(--sans); font-weight: 400; font-size: 15px; line-height: 1.6;
+    padding-inline: 20px; padding-block: 28px 72px;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; }
+
+  button, select, input { font: inherit; color: inherit; }
+  button { background: none; border: 0; padding: 0; cursor: pointer; }
+  :focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
+
+  .t { color: var(--mute); transition: color .15s; }
+  .t:hover, .t[aria-pressed="true"], .t[aria-expanded="true"] { color: var(--ink); }
+
+  /* top */
+  .top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; font-size: 13px; }
+  .mark { font-weight: 600; letter-spacing: -.01em; }
+  .mark span { color: var(--mute); font-weight: 400; }
+  .top nav { display: flex; gap: 16px; }
+
+  /* controls line */
+  .controls {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px;
+    margin-top: 56px; font-size: 14px;
+  }
+  select {
+    appearance: none; -webkit-appearance: none; background: transparent; border: 0; padding: 0 16px 0 0;
+    color: var(--mute); cursor: pointer; max-width: 100%; field-sizing: content;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: right 5px center, right 1px center; background-size: 4px 4px; background-repeat: no-repeat;
+  }
+  select:hover { color: var(--ink); }
+  .pick {
+    margin-left: auto; border: 1px solid var(--ink); padding: 7px 16px; font-size: 13px; font-weight: 600;
+    transition: background .15s, color .15s;
+  }
+  .pick:hover { background: var(--ink); color: var(--bg); }
+  select option { color: #151614; background: #fff; }
+
+  /* topic */
+  .topic { margin-top: 40px; min-height: 170px; display: flex; flex-direction: column; gap: 10px; }
+  .meta:empty { display: none; }
+  .meta { font-family: var(--mono); font-size: 12px; color: var(--mute); display: flex; gap: 12px; font-variant-numeric: tabular-nums; }
+  .term {
+    margin: 0; font-weight: 600; letter-spacing: -.03em; line-height: 1.12;
+    font-size: clamp(36px, 10vw, 60px); text-wrap: balance; word-break: keep-all; overflow-wrap: anywhere;
+  }
+  .en { margin: 0; color: var(--mute); font-weight: 300; font-size: 17px; }
+  .topic.rolling .term { color: var(--faint); }
+  .topic.empty .term { color: var(--faint); font-weight: 400; font-size: clamp(26px, 7vw, 36px); letter-spacing: -.02em; }
+  .topic.rolling .en, .topic.rolling .meta { color: var(--faint); }
+  .topic.in .term { animation: land .45s cubic-bezier(.2, .8, .2, 1); }
+  .topic.in .en { animation: fade .5s ease-out; }
+  @keyframes land { from { transform: translateY(-10px); opacity: .3; } to { transform: none; opacity: 1; } }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .pick:disabled { opacity: .3; cursor: not-allowed; }
+
+  /* timer */
+  .timer, .actions { animation: fade .4s ease-out; }
+  .timer { margin-top: 48px; display: flex; flex-direction: column; gap: 12px; }
+  .clockrow { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .clock { font-family: var(--mono); font-weight: 300; font-size: clamp(48px, 15vw, 76px); line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+  .clock.over { color: var(--accent); }
+  .phase { font-size: 13px; color: var(--mute); text-align: right; }
+  .line { height: 1px; background: var(--line); position: relative; }
+  .line i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--ink); transition: width .25s linear; }
+
+  /* actions */
+  .actions { margin-top: 36px; display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+  .go {
+    background: var(--ink); color: var(--bg); padding: 12px 26px; font-weight: 600; font-size: 14px;
+    transition: opacity .15s;
+  }
+  .go:hover { opacity: .85; }
+  .go:disabled { opacity: .25; cursor: not-allowed; }
+  .actions .t { font-size: 14px; }
+
+
+  /* drawers */
+  .drawer { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--mute); }
+  input[type="text"], input[type="number"] {
+    background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 6px 0; width: 100%;
+    font-size: 16px; border-radius: 0;
+  }
+  input[type="text"]:focus, input[type="number"]:focus { outline: none; border-bottom-color: var(--ink); }
+  .nums { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+
+  /* history */
+  .history { margin-top: 64px; display: flex; flex-direction: column; gap: 8px; }
+  .history-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--mute); }
+  .history ol { list-style: none; margin: 0; padding: 0; }
+  .history li {
+    display: grid; grid-template-columns: 1fr auto; gap: 0 16px; padding: 12px 0;
+    border-top: 1px solid var(--line); font-size: 14px;
+  }
+  .history li:last-child { border-bottom: 1px solid var(--line); }
+  .h-meta { grid-column: 1; font-size: 12px; color: var(--mute); }
+  .h-state { grid-row: span 2; align-self: center; font-family: var(--mono); font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; }
+  .confirm { display: inline-flex; gap: 12px; }
+
+  @media (max-width: 440px) {
+    .controls { margin-top: 40px; }
+    .pick { margin-left: 0; width: 100%; margin-top: 12px; padding: 11px 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .topic.in .term, .topic.in .en { animation: none; }
+    .line i { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top">
+    <span class="mark">feynman</span>
+    <nav>
+      <button type="button" class="t" id="settings-btn" aria-expanded="false" aria-controls="settings">설정</button>
+    </nav>
+  </div>
+
+  <section class="drawer" id="settings" hidden>
+    <div class="nums">
+      <label class="field" for="t-research">리서치 (분)<input type="number" id="t-research" min="1" max="60" step="1"></label>
+      <label class="field" for="t-speak">말하기 (분)<input type="number" id="t-speak" min="0.5" max="15" step="0.5"></label>
+    </div>
+  </section>
+
+  <div class="controls">
+    <label for="category" hidden>카테고리</label>
+    <select id="category"></select>
+    <button type="button" class="pick" id="draw">새 주제 뽑기</button>
+  </div>
+
+  <section class="topic empty" id="topic" aria-live="polite">
+    <div class="meta" id="chip"></div>
+    <h1 class="term" id="term">새 주제를 뽑아보세요</h1>
+    <p class="en" id="term-en" hidden></p>
+  </section>
+
+  <section class="timer" id="timer" aria-label="타이머" hidden>
+    <div class="clockrow">
+      <span class="clock" id="clock">10:00</span>
+      <span class="phase" id="phase"></span>
+    </div>
+    <div class="line"><i id="bar"></i></div>
+  </section>
+
+  <div class="actions" id="actions" hidden>
+    <button type="button" class="go" id="run">리서치 시작</button>
+  </div>
+
+  <section class="history" id="history-section">
+    <div class="history-head">
+      <span id="history-title">기록</span>
+      <span id="clear-wrap"><button type="button" class="t" id="clear">비우기</button></span>
+    </div>
+    <ol id="history"></ol>
+  </section>
+</div>
+
+<script>
+(() => {
+  const CATS = [
+    { id: "biz", name: "경영학",
+      terms: ["STP|Segmentation · Targeting · Positioning", "4P 마케팅 믹스|Marketing Mix", "제품수명주기|Product Life Cycle", "포지셔닝 맵|Perceptual Map", "SWOT 분석|SWOT Analysis", "가격탄력성|Price Elasticity", "손익분기점|Break-even Point", "공헌이익|Contribution Margin", "부채비율|Debt Ratio", "영업이익률|Operating Margin", "흑자도산|Profitable Bankruptcy", "EBITDA|Earnings before Interest, Taxes, D&A", "굿하트의 법칙|Goodhart's Law", "선행지표와 후행지표|Leading vs Lagging Indicators", "OKR|Objectives and Key Results", "파레토 법칙|Pareto Principle", "병목|Bottleneck", "카이젠|Kaizen", "코스의 정리|The Coase Theorem", "정보 비대칭|Information Asymmetry", "도덕적 해이|Moral Hazard", "콘웨이의 법칙|Conway's Law", "생산성 역설|Productivity Paradox", "제번스의 역설|Jevons Paradox", "허즈버그 2요인 이론|Herzberg's Two-Factor Theory", "상관과 인과|Correlation vs Causation", "생존편향|Survivorship Bias", "켈러의 브랜드 자산 모형|Keller's CBBE Model", "혁신 확산 이론|Diffusion of Innovations", "앤소프 매트릭스|Ansoff Matrix", "BCG 매트릭스|Growth-Share Matrix", "포터의 5가지 경쟁요인|Porter's Five Forces", "포터의 가치사슬|Value Chain", "듀폰 분석|DuPont Analysis", "현금전환주기|Cash Conversion Cycle", "영업레버리지|Operating Leverage", "잉여현금흐름|Free Cash Flow", "활동기준원가계산|Activity-Based Costing", "제약이론|Theory of Constraints", "리틀의 법칙|Little's Law", "균형성과표|Balanced Scorecard", "거래비용 이론|Transaction Cost Economics", "주인-대리인 문제|Principal-Agent Problem", "레몬 시장|The Market for Lemons", "자원기반관점|Resource-Based View", "동적 역량|Dynamic Capabilities", "솔로우의 생산성 역설|Solow Paradox", "생산성 J-커브|Productivity J-Curve", "범용기술|General Purpose Technology", "보완 자산|Complementary Assets", "보몰의 비용병|Baumol's Cost Disease", "이중차분법|Difference-in-Differences", "도구변수|Instrumental Variables"] },
+    { id: "product", name: "제품",
+      terms: ["PMF|Product-Market Fit", "MVP|Minimum Viable Product", "컨시어지 MVP|Concierge MVP", "네트워크 효과|Network Effects", "콜드 스타트 문제|Cold Start Problem", "플라이휠|Flywheel", "전환비용|Switching Costs", "이탈률|Churn Rate", "북극성 지표|North Star Metric", "A/B 테스트|A/B Testing", "프리미엄 모델|Freemium", "버티컬 SaaS|Vertical SaaS", "LTV/CAC|Lifetime Value to CAC", "온보딩|User Onboarding", "아하 모먼트|Aha Moment", "퍼널 분석|Funnel Analysis", "리텐션 곡선|Retention Curve", "도그푸딩|Dogfooding", "기능 비대화|Feature Creep", "RICE 우선순위|RICE Scoring", "휴먼 인 더 루프|Human-in-the-Loop", "자동화 편향|Automation Bias", "할 일 이론|Jobs-to-be-Done", "양면시장|Two-sided Market", "데이터 네트워크 효과|Data Network Effects", "순매출유지율|Net Revenue Retention", "파괴적 혁신|Disruptive Innovation", "캐즘|Crossing the Chasm", "7 파워|7 Powers", "집계 이론|Aggregation Theory", "랜드 앤 익스팬드|Land and Expand", "코호트 분석|Cohort Analysis", "카노 모델|Kano Model", "훅 모델|Hook Model", "서비스 블루프린트|Service Blueprint", "디자인 씽킹|Design Thinking", "더블 다이아몬드|Double Diamond", "린 스타트업|Lean Startup", "서브퀄|SERVQUAL", "고객 생애 가치|Customer Lifetime Value", "기술 수용 모델|Technology Acceptance Model", "제품 주도 성장|Product-Led Growth", "임베디드 금융|Embedded Finance", "들쭉날쭉한 경계|Jagged Technological Frontier"] },
+    { id: "philo", name: "철학",
+      terms: ["오컴의 면도날|Occam's Razor", "소크라테스식 문답법|Socratic Method", "통제의 이분법|Dichotomy of Control", "메멘토 모리|Memento Mori", "아모르 파티|Amor Fati", "무지의 베일|Veil of Ignorance", "트롤리 딜레마|Trolley Problem", "공리주의|Utilitarianism", "실존은 본질에 앞선다|Existence Precedes Essence", "시시포스 신화|The Myth of Sisyphus", "테세우스의 배|Ship of Theseus", "플라톤의 동굴|Allegory of the Cave", "중용|Golden Mean", "무위|Wu Wei", "제1원리 사고|First Principles Thinking", "반증 가능성|Falsifiability", "2차적 사고|Second-order Thinking", "린디 효과|Lindy Effect", "에우다이모니아|Eudaimonia", "스토아 철학|Stoicism", "영원회귀|Eternal Recurrence", "칸트의 정언명령|Categorical Imperative", "롤스의 정의론|A Theory of Justice", "흄의 귀납의 문제|Problem of Induction", "포퍼의 반증주의|Falsificationism", "쿤의 패러다임 전환|Paradigm Shift", "비트겐슈타인의 언어게임|Language Games", "현상학|Phenomenology", "실용주의|Pragmatism", "무아|Anattā (Non-self)", "제한된 합리성|Bounded Rationality", "나이트의 불확실성|Knightian Uncertainty", "폴라니의 역설|Polanyi's Paradox", "베이즈 업데이트|Bayesian Updating", "안티프래질|Antifragility"] },
+    { id: "life", name: "삶",
+      terms: ["이키가이|Ikigai", "쾌락의 쳇바퀴|Hedonic Treadmill", "몰입|Flow", "매몰비용 오류|Sunk Cost Fallacy", "기회비용|Opportunity Cost", "확증편향|Confirmation Bias", "앵커링 효과|Anchoring", "결정 피로|Decision Fatigue", "선택의 역설|Paradox of Choice", "만족화|Satisficing", "사전 부검|Pre-mortem", "한 방향 문과 양방향 문|One-way vs Two-way Doors", "파킨슨의 법칙|Parkinson's Law", "피터의 원리|Peter Principle", "습관 루프|Habit Loop", "딥 워크|Deep Work", "성장 마인드셋|Growth Mindset", "번아웃|Burnout", "던바의 수|Dunbar's Number", "약한 연결의 힘|Strength of Weak Ties", "자기결정성 이론|Self-Determination Theory", "탐색과 활용|Explore–Exploit Tradeoff", "전망 이론|Prospect Theory", "시스템 1과 시스템 2|Dual Process Theory", "노이즈|Noise (Kahneman)", "매슬로의 욕구 단계|Hierarchy of Needs", "학습된 무기력|Learned Helplessness", "회복탄력성|Resilience", "마음챙김|Mindfulness", "자아 고갈 논쟁|Ego Depletion", "피크엔드 법칙|Peak-End Rule", "경험하는 자아와 기억하는 자아|Experiencing vs Remembering Self", "커리어 자본|Career Capital", "의도적 연습|Deliberate Practice", "사회 비교 이론|Social Comparison Theory", "바벨 전략|Barbell Strategy"] },
+    { id: "money", name: "돈",
+      terms: ["복리|Compound Interest", "72의 법칙|Rule of 72", "4% 룰|The 4% Rule", "인플레이션|Inflation", "분산투자|Diversification", "적립식 투자|Dollar-Cost Averaging", "인덱스 펀드|Index Fund", "ETF|Exchange-Traded Fund", "배당수익률|Dividend Yield", "레버리지|Leverage", "비상금|Emergency Fund", "유동성|Liquidity", "금리와 채권 가격|Interest Rates & Bond Prices", "리츠|REITs", "ISA 계좌|Individual Savings Account", "연금저축과 IRP|Pension Savings & IRP", "청약 가점제|Housing Subscription Points", "전세와 월세|Jeonse vs Monthly Rent", "DSR|Debt Service Ratio", "라이프스타일 인플레이션|Lifestyle Inflation", "수익률 순서 위험|Sequence of Returns Risk", "자산배분|Asset Allocation", "배당 성장 투자|Dividend Growth Investing", "파이어 운동|FIRE Movement", "켈리 기준|Kelly Criterion", "기대가치|Expected Value", "효율적 시장 가설|Efficient Market Hypothesis", "현대 포트폴리오 이론|Modern Portfolio Theory", "샤프 비율|Sharpe Ratio", "레버리지 ETF의 변동성 끌림|Volatility Decay", "환율과 환헤지|Currency Hedging", "항상소득 가설|Permanent Income Hypothesis", "행동재무학|Behavioral Finance", "화폐의 시간가치|Time Value of Money", "현금흐름할인법|Discounted Cash Flow", "실물옵션|Real Options"] }
+  ];
+  const DEFAULTS = { cat: "all", research: 10, speak: 3 };
+  const KEY = "khaki-impromptu-v1";
+
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } },
+    save(data) { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch {} }
+  };
+  const saved = store.load();
+  const state = {
+    settings: { ...DEFAULTS, ...(saved.settings || {}) },
+    history: Array.isArray(saved.history) ? saved.history : [],
+    bags: saved.bags && typeof saved.bags === "object" ? saved.bags : {},
+    topic: null,
+    phaseIdx: 0, remaining: 0, total: 0, running: false, overtime: false,
+    tick: null, lastTs: 0, wakeLock: null
+  };
+  const persist = () => store.save({ settings: state.settings, history: state.history.slice(0, 60), bags: state.bags });
+
+  const catSel = $("category");
+  catSel.append(new Option("전체 카테고리", "all"));
+  CATS.forEach(c => catSel.append(new Option(c.name, c.id)));
+
+
+  const phases = () => [{ name: "리서치", min: state.settings.research }, { name: "말하기", min: state.settings.speak }];
+
+  // ---------- drawing ----------
+  const parse = (s) => { const [ko, en] = s.split("|"); return { ko, en: en || "" }; };
+
+
+  const reduceMotion = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let rolling = false;
+
+  // 슬롯처럼 무작위 용어를 빠르게 넘기다가 점점 느려지며 최종 주제에 멈춘다
+  function roll(final, pool) {
+    if (reduceMotion()) { setTopic(final); return; }
+    rolling = true;
+    stopTick();
+    renderTimer();
+    const el = $("topic");
+    el.classList.remove("in", "empty"); el.classList.add("rolling");
+    const delays = [35, 35, 40, 40, 45, 50, 55, 65, 75, 90, 110, 135, 165];
+    let i = 0, last = null;
+    const step = () => {
+      if (i >= delays.length) {
+        el.classList.remove("rolling");
+        rolling = false; $("draw").disabled = false;
+        setTopic(final);
+        return;
+      }
+      let r;
+      do { r = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 2 && (r === last || r.ko === final.ko));
+      last = r;
+      $("term").textContent = r.ko;
+      $("term-en").textContent = r.en; $("term-en").hidden = !r.en;
+      if (state.settings.cat === "all") $("chip").textContent = CATS.find(c => c.id === r.catId).name;
+      setTimeout(step, delays[i++]);
+    };
+    step();
+  }
+
+  function draw(animate = true) {
+    if (rolling || state.running) return;
+    const cat = CATS.find(c => c.id === state.settings.cat);
+    // 전체: 모든 용어를 한 덱으로
+    const pool = cat ? cat.terms.map(s => ({ ...parse(s), catId: cat.id }))
+      : CATS.flatMap(c => c.terms.map(s => ({ ...parse(s), catId: c.id })));
+    const final = takeFrom(cat ? cat.id : "all", pool);
+    if (animate) roll(final, pool); else setTopic(final);
+  }
+
+  const shuffle = (arr) => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  // 셔플 백: 카테고리·모드별 덱에서 한 장씩 빼서, 한 바퀴 돌기 전엔 반복되지 않는다
+  function takeFrom(bagId, pool) {
+    const current = state.topic && state.topic.ko;
+    const key = bagId;
+    const names = new Set(pool.map(t => t.ko));
+    let bag = (state.bags[key] || []).filter(ko => names.has(ko));
+    if (!bag.length) {
+      bag = shuffle(pool.map(t => t.ko));
+      // 새 바퀴의 첫 장이 방금 본 주제와 겹치지 않게
+      if (bag.length > 1 && bag[bag.length - 1] === current) [bag[0], bag[bag.length - 1]] = [bag[bag.length - 1], bag[0]];
+    }
+    const ko = bag.pop();
+    state.bags[key] = bag;
+    persist();
+    return pool.find(t => t.ko === ko);
+  }
+
+  function showEmpty() {
+    const el = $("topic");
+    el.classList.remove("in", "rolling"); el.classList.add("empty");
+    $("chip").textContent = "";
+    $("term").textContent = "새 주제를 뽑아보세요";
+    $("term-en").hidden = true;
+  }
+
+  function setTopic(t) {
+    state.topic = t;
+    const cat = CATS.find(c => c.id === t.catId);
+    $("chip").textContent = state.settings.cat === "all" ? cat.name : "";
+    $("term").textContent = t.ko;
+    $("term-en").textContent = t.en;
+    $("term-en").hidden = !t.en;
+    const el = $("topic");
+    el.classList.remove("in", "empty"); void el.offsetWidth; el.classList.add("in");
+    resetTimer();
+  }
+
+  // ---------- timer ----------
+  const fmt = (sec) => {
+    const s = Math.max(0, Math.ceil(Math.abs(sec)));
+    return `${state.overtime ? "+" : ""}${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  };
+
+  function resetTimer() {
+    stopTick();
+    state.phaseIdx = 0; state.overtime = false;
+    state.total = state.remaining = phases()[0].min * 60;
+    renderTimer();
+  }
+
+  function renderTimer() {
+    const ps = phases(), ph = $("phase"), run = $("run"), clock = $("clock");
+    clock.classList.toggle("over", state.overtime);
+    $("timer").hidden = $("actions").hidden = !state.topic || rolling;
+    $("draw").disabled = rolling || state.running;
+
+    const p = ps[state.phaseIdx];
+    clock.textContent = fmt(state.remaining);
+    $("bar").style.width = state.overtime ? "100%" : `${(1 - state.remaining / state.total) * 100}%`;
+    ph.textContent = p.name;
+
+    if (state.phaseIdx === 1 && state.running) run.textContent = "설명 끝";
+    else if (state.running) run.textContent = "일시정지";
+    else if (state.remaining < state.total || state.overtime) run.textContent = "계속";
+    else run.textContent = `${p.name} 시작`;
+  }
+
+  function startTick() {
+    state.running = true; state.lastTs = performance.now();
+    state.tick = setInterval(onTick, 250);
+    requestWake(); renderTimer();
+  }
+  function stopTick() {
+    state.running = false;
+    if (state.tick) clearInterval(state.tick);
+    state.tick = null; releaseWake();
+  }
+  function onTick() {
+    const now = performance.now(), dt = (now - state.lastTs) / 1000;
+    state.lastTs = now;
+    if (state.overtime) state.remaining += dt;
+    else {
+      state.remaining -= dt;
+      if (state.remaining <= 0) {
+        beep();
+        if (state.phaseIdx === 0) {
+          stopTick(); state.phaseIdx = 1;
+          state.total = state.remaining = phases()[1].min * 60;
+        } else { state.overtime = true; state.remaining = 0; }
+      }
+    }
+    renderTimer();
+  }
+
+  function onRun() {
+    if (!state.topic) return;
+    if (state.phaseIdx === 1 && state.running) { finish(); return; }
+    if (state.running) { stopTick(); renderTimer(); } else startTick();
+  }
+
+  function finish() {
+    stopTick();
+    const spoke = state.overtime ? state.total + state.remaining : state.total - state.remaining;
+    state.history.unshift({
+      ko: state.topic.ko, en: state.topic.en, catId: state.topic.catId,
+      spoke: Math.round(spoke), at: Date.now()
+    });
+    state.topic = null;
+    persist(); renderHistory(); showEmpty(); resetTimer();
+  }
+
+  let audio;
+  function beep() {
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.22].forEach(off => {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.frequency.value = 660; o.connect(g); g.connect(audio.destination);
+        const t0 = audio.currentTime + off;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.2, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.2);
+        o.start(t0); o.stop(t0 + 0.22);
+      });
+    } catch {}
+  }
+  async function requestWake() {
+    try { if ("wakeLock" in navigator) state.wakeLock = await navigator.wakeLock.request("screen"); } catch {}
+  }
+  function releaseWake() {
+    try { state.wakeLock && state.wakeLock.release(); } catch {}
+    state.wakeLock = null;
+  }
+
+  // ---------- history ----------
+  function renderHistory() {
+    const ol = $("history");
+    ol.innerHTML = "";
+    state.history.slice(0, 30).forEach(h => {
+      const cat = CATS.find(c => c.id === h.catId);
+      const d = new Date(h.at);
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="h-term"></span><span class="h-state"></span><span class="h-meta"></span>`;
+      li.querySelector(".h-term").textContent = h.ko;
+      li.querySelector(".h-state").textContent = `${Math.floor(h.spoke / 60)}:${String(h.spoke % 60).padStart(2, "0")}`;
+      li.querySelector(".h-meta").textContent =
+        `${d.getMonth() + 1}.${d.getDate()} · ${cat ? cat.name : ""}`;
+      ol.append(li);
+    });
+    $("history-title").textContent = state.history.length ? `기록 ${state.history.length}` : "기록";
+    $("history-section").hidden = state.history.length === 0;
+  }
+
+  $("clear-wrap").addEventListener("click", (e) => {
+    const wrap = $("clear-wrap"), id = e.target.id;
+    if (id === "clear") {
+      wrap.innerHTML = `<span class="confirm">모두 지울까요? <button type="button" class="t" id="clear-yes" style="color:var(--ink)">지우기</button><button type="button" class="t" id="clear-no">취소</button></span>`;
+    } else if (id === "clear-yes" || id === "clear-no") {
+      if (id === "clear-yes") { state.history = []; persist(); }
+      wrap.innerHTML = `<button type="button" class="t" id="clear">비우기</button>`;
+      renderHistory();
+    }
+  });
+
+  // ---------- controls ----------
+
+  if (!CATS.some(c => c.id === state.settings.cat)) state.settings.cat = "all";
+  catSel.value = state.settings.cat;
+  catSel.addEventListener("change", () => { state.settings.cat = catSel.value; persist(); });
+
+  Object.entries({ "t-research": "research", "t-speak": "speak" }).forEach(([id, key]) => {
+    const el = $(id); el.value = state.settings[key];
+    el.addEventListener("change", () => {
+      const v = parseFloat(el.value);
+      if (!isFinite(v) || v <= 0) { el.value = state.settings[key]; return; }
+      state.settings[key] = Math.min(v, 60); el.value = state.settings[key]; persist();
+      if (!state.running && state.phaseIdx !== 2) resetTimer(); else renderTimer();
+    });
+  });
+
+  function toggle(btn, panel) {
+    const open = panel.hidden;
+    panel.hidden = !open; btn.setAttribute("aria-expanded", open);
+    return open;
+  }
+  $("settings-btn").addEventListener("click", () => toggle($("settings-btn"), $("settings")));
+
+  $("draw").addEventListener("click", () => draw());
+  $("run").addEventListener("click", onRun);
+  document.addEventListener("keydown", (e) => {
+    if (e.target.closest("input, select, textarea, button")) return;
+    if (e.key === "Enter") { e.preventDefault(); draw(); }
+    else if (e.key === " ") { e.preventDefault(); onRun(); }
+  });
+
+  renderHistory();
+  resetTimer();
+})();
+</script>
+</body>
+</html>
